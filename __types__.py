@@ -70,18 +70,45 @@ class Assignment(TypedDict):
     starttime: int
 
 
-class Export(TypedDict):
-    students: list[Student]
-    assignments: list[Assignment]
-    teachers: list[Teacher]
+class Kattis:
+    def __init__(self) -> None:
+        self.students: list[Student] = []
+        self.assignments: list[Assignment] = []
+        self.teachers: list[Teacher] = []
 
+    def load(self, kattis_json_path: str):
+        from json import load
 
-def subs(asm: Assignment) -> Iterator[tuple[str, Submission]]:
-    """
-    Create an iterator over the submissions of the assignment.
-    Returns a tuple of (<Assignment Name>, <Submission>) each iterate.
-    """
-    for group in asm["groups"]:
-        for asm_name, result in group["results"].items():
-            for sub in result["submissions"]:
-                yield asm_name, sub
+        with open(kattis_json_path, "r") as f:
+            data = load(f)
+            self.students = data["students"]
+            self.assignments = data["assignments"]
+            self.teachers = data["teachers"]
+
+            for s in self.students:
+                s["email"] = s["email"].lower()
+
+    def list_student_usernames(self) -> list[str]:
+        return [s["username"] for s in self.students]
+
+    def list_assignments(self) -> list[str]:
+        """
+        Lists all the unique assignment names found in the database.
+        """
+        assignments = set()
+        for asm in self.assignments:
+            for group in asm["groups"]:
+                for assignment in group["results"].keys():
+                    assignments.add(assignment)
+        return list(assignments)
+
+    def subs(self) -> Iterator[tuple[str, Submission]]:
+        """
+        Create an iterator over the submissions of the assignment.
+        Returns a tuple of (<Assignment Name>, <Submission>) each iterate.
+        """
+        for asm in self.assignments:
+            for group in asm["groups"]:
+                for asm_name, result in group["results"].items():
+                    for sub in result["submissions"]:
+                        yield asm_name, sub
